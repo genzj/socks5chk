@@ -21,23 +21,29 @@ if sys.platform == 'win32' and (sys.version_info.major < 3
     import win_inet_pton
 import socket
 import socks
+import binascii
 
-def test_udp(typ, addr, port, user=None, pwd=None):
+def test_udp(typ, addr, port, user=None, pwd=None, host='8.8.8.8'):
     s = socks.socksocket(socket.AF_INET, socket.SOCK_DGRAM) # Same API as socket.socket in the standard lib
     try:
-        s.set_proxy(socks.SOCKS5, addr, port, False, user, pwd) # SOCKS4 and SOCKS5 use port 1080 by default
+        s.set_proxy(socks.SOCKS5, addr, port, True, user, pwd) # SOCKS4 and SOCKS5 use port 1080 by default
         # Can be treated identical to a regular socket object
         # Raw DNS request
         req = b"\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05\x62\x61\x69\x64\x75\x03\x63\x6f\x6d\x00\x00\x01\x00\x01"
-        s.sendto(req, ("8.8.8.8", 53))
+        s.sendto(req, (host, 53))
         (rsp, address)= s.recvfrom(4096)
+        print('packet received: ')
+        print(binascii.b2a_hex(rsp))
         if rsp[0] == req[0] and rsp[1] == req[1]:
             print("UDP check passed")
         else:
             print("Invalid response")
     except socket.error as e:
+        print('socket error')
         print(repr(e))
+        raise
     except socks.ProxyError as e:
+        print('proxy error')
         print(e.msg)
 
 
@@ -61,8 +67,10 @@ def main():
                        help='Specify username to be used for proxy authentication.')
     parser.add_argument('--pwd', "-k", metavar="password", dest="pwd", default=None,
                        help='Specify password to be used for proxy authentication.')
+    parser.add_argument('--host', "-H", metavar="host", dest="host", default='8.8.8.8',
+                       help='Specify remote DNS host used for udp connection.')
     args = parser.parse_args()
-    test_udp(None, args.proxy, args.port, args.user, args.pwd)
+    test_udp(None, args.proxy, args.port, args.user, args.pwd, args.host)
 
 
 if __name__ == "__main__":

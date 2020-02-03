@@ -22,18 +22,19 @@ if sys.platform == 'win32' and (sys.version_info.major < 3
 import socket
 import socks
 
-def test_tcp(typ, addr, port, user=None, pwd=None):
+def test_tcp(typ, addr, port, user=None, pwd=None, host='www.google.com'):
     s = socks.socksocket(socket.AF_INET, socket.SOCK_STREAM) # Same API as socket.socket in the standard lib
     try:
         s.set_proxy(socks.SOCKS5, addr, port, False, user, pwd) # SOCKS4 and SOCKS5 use port 1080 by default
         # Can be treated identical to a regular socket object
         # Raw HTTP request
-        host = "www.baidu.com"
-        req = b"GET / HTTP/1.0\r\nHost: %s\r\n\r\n" % host
+        req = ("GET / HTTP/1.0\r\nHost: %s\r\n\r\n" % host).encode('ascii')
         s.connect((host, 80))
         s.send(req)
-        rsp = s.recv(4096)
-        if rsp.startswith("HTTP/1.1 200 OK"):
+        rsp = s.recv(100).decode('ascii')
+        print('packet received:')
+        print(rsp)
+        if "200 OK" in rsp:
             print("TCP check passed")
         else:
             print("Invalid response")
@@ -64,8 +65,10 @@ def main():
                        help='Specify username to be used for proxy authentication.')
     parser.add_argument('--pwd', "-k", metavar="password", dest="pwd", default=None,
                        help='Specify password to be used for proxy authentication.')
+    parser.add_argument('--host', "-H", metavar="host", dest="host", default='www.google.com',
+                       help='Specify remote HTTP host used for tcp connection.')
     args = parser.parse_args()
-    test_tcp(None, args.proxy, args.port, args.user, args.pwd)
+    test_tcp(None, args.proxy, args.port, args.user, args.pwd, args.host)
 
 
 if __name__ == "__main__":
