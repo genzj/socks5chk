@@ -22,6 +22,7 @@ if sys.platform == 'win32' and (sys.version_info.major < 3
 import socket
 import socks
 import binascii
+from dnslib import DNSRecord, DNSError
 
 def test_udp(typ, addr, port, user=None, pwd=None, host='8.8.8.8'):
     s = socks.socksocket(socket.AF_INET, socket.SOCK_DGRAM) # Same API as socket.socket in the standard lib
@@ -34,6 +35,9 @@ def test_udp(typ, addr, port, user=None, pwd=None, host='8.8.8.8'):
         (rsp, address)= s.recvfrom(4096)
         print('packet received: ')
         print(binascii.b2a_hex(rsp))
+        record = DNSRecord.parse(rsp)
+        print('DNS response:')
+        print(record)
         if rsp[0] == req[0] and rsp[1] == req[1]:
             print("UDP check passed")
         else:
@@ -45,6 +49,11 @@ def test_udp(typ, addr, port, user=None, pwd=None, host='8.8.8.8'):
     except socks.ProxyError as e:
         print('proxy error')
         print(e.msg)
+        raise
+    except DNSError as e:
+        print('DNS record parse error')
+        print(e)
+        raise
 
 
 def main():
